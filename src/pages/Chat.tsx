@@ -192,6 +192,18 @@ const Chat = () => {
     }
   };
 
+  const handleCustomScenario = (text: string) => {
+    if (text === customScenario) return;
+    setCustomScenario(text);
+    setActiveScenario(null);
+    if (text) {
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: `*Custom scene set: ✍️ ${text}*\n\nGot it — I'll adapt to this situation. Go ahead, what would you say?` },
+      ]);
+    }
+  };
+
   const handleSend = async (text: string) => {
     const userMsg: Msg = { role: "user", content: text };
     const updatedMessages = [...messages, userMsg];

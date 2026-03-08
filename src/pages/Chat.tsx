@@ -39,6 +39,7 @@ function buildSystemPrompt(
   persona: Persona | null,
   scenario: Scenario | null,
   customScenario: string,
+  responseStyle: ResponseStyle,
 ): string {
   let prompt = `${basePrompt}\n\nIMPORTANT RULES:
 - Stay in character at all times as a ${categoryName}.
@@ -54,6 +55,11 @@ function buildSystemPrompt(
   } else if (customScenario) {
     prompt += `\n\nCurrent scenario (user-defined): ${customScenario}\nAdapt your behavior and responses to fit this situation while staying in character.`;
   }
+
+  prompt += `\n\nRESPONSE STYLE:
+- Emotional tone: ${responseStyle.emotionalTone}. Match this energy level in your responses.
+- Communication style: ${responseStyle.communicationStyle}. Use this approach when responding.`;
+
   return prompt;
 }
 

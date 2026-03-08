@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, Shield } from "lucide-react";
@@ -8,6 +8,8 @@ import ChatInput from "@/components/ChatInput";
 import TypingIndicator from "@/components/TypingIndicator";
 import PersonaSelector from "@/components/PersonaSelector";
 import ScenarioSelector from "@/components/ScenarioSelector";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
@@ -30,6 +32,88 @@ function checkSafety(text: string): boolean {
   return SAFETY_KEYWORDS.some((kw) => lower.includes(kw));
 }
 
+function buildSystemPrompt(
+  categoryName: string,
+  basePrompt: string,
+  persona: Persona | null,
+  scenario: Scenario | null,
+): string {
+  let prompt = `${basePrompt}\n\nIMPORTANT RULES:
+- Stay in character at all times as a ${categoryName}.
+- Keep responses conversational, 1-3 sentences unless the user asks for more detail.
+- Never break character or mention that you are an AI.
+- If the user says something that indicates suicidal thoughts, self-harm, violence, child exploitation, sexual harassment, or any dangerous/illegal activity, immediately drop character and provide crisis resources.`;
+
+  if (persona) {
+    prompt += `\n\nYour personality: ${persona.label}. ${persona.promptModifier}`;
+  }
+  if (scenario) {
+    prompt += `\n\nCurrent scenario: ${scenario.label}. ${scenario.promptModifier}`;
+  }
+  return prompt;
+}
+
+const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
+
+async function streamChat({
+  messages,
+  systemPrompt,
+  onDelta,
+  onDone,
+  onError,
+}: {
+  messages: Msg[];
+  systemPrompt: string;
+  onDelta: (text: string) => void;
+  onDone: () => void;
+  onError: (err: string) => void;
+}) {
+  const resp = await fetch(CHAT_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+    },
+    body: JSON.stringify({ messages, systemPrompt }),
+  });
+
+  if (!resp.ok) {
+    const body = await resp.json().catch(() => ({}));
+    onError(body.error || `Request failed (${resp.status})`);
+    return;
+  }
+  if (!resp.body) { onError("No response body"); return; }
+
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+
+    let idx: number;
+    while ((idx = buf.indexOf("\n")) !== -1) {
+      let line = buf.slice(0, idx);
+      buf = buf.slice(idx + 1);
+      if (line.endsWith("\r")) line = line.slice(0, -1);
+      if (!line.startsWith("data: ")) continue;
+      const json = line.slice(6).trim();
+      if (json === "[DONE]") { onDone(); return; }
+      try {
+        const parsed = JSON.parse(json);
+        const content = parsed.choices?.[0]?.delta?.content;
+        if (content) onDelta(content);
+      } catch {
+        buf = line + "\n" + buf;
+        break;
+      }
+    }
+  }
+  onDone();
+}
+
 const Chat = () => {
   const { categoryId } = useParams<{ categoryId: string }>();
   const navigate = useNavigate();
@@ -41,36 +125,38 @@ const Chat = () => {
   const [activePersona, setActivePersona] = useState<Persona | null>(null);
   const [activeScenario, setActiveScenario] = useState<Scenario | null>(null);
 
-  // Set default persona on load
   useEffect(() => {
     if (category && category.personas.length > 0) {
       setActivePersona(category.personas[0]);
     }
   }, [category]);
 
+  // Generate initial greeting via AI
   useEffect(() => {
     if (!category || !activePersona) return;
-    // Initial greeting
     setIsTyping(true);
-    const greetings: Record<string, Record<string, string>> = {
-      boss: {
-        friendly: "Hey! Come on in, grab a seat. How's everything going? 😊",
-        hostile: "You're late. Sit down. We need to talk about your performance.",
-        suspicious: "Close the door. I've been looking at some numbers and I have questions…",
-        passive: "Oh, you're here. *That's* nice. I didn't think you'd make it today.",
-        mentor: "Good morning! I've been thinking about your career development. Let's chat.",
+    setMessages([]);
+
+    const systemPrompt = buildSystemPrompt(category.name, category.basePrompt, activePersona, activeScenario);
+    const greetingRequest: Msg[] = [
+      { role: "user", content: "Start the conversation with a short, natural greeting in character. Don't mention that you're an AI or roleplay bot." },
+    ];
+
+    let greeting = "";
+    streamChat({
+      messages: greetingRequest,
+      systemPrompt,
+      onDelta: (chunk) => {
+        greeting += chunk;
+        setMessages([{ role: "assistant", content: greeting }]);
       },
-    };
-
-    const categoryGreetings = greetings[category.id];
-    const greeting = categoryGreetings?.[activePersona.id]
-      || `Hi! I'm your ${activePersona.emoji} ${activePersona.label} ${category.name}. How can I help?`;
-
-    const timeout = setTimeout(() => {
-      setMessages([{ role: "assistant", content: greeting }]);
-      setIsTyping(false);
-    }, 800);
-    return () => clearTimeout(timeout);
+      onDone: () => setIsTyping(false),
+      onError: (err) => {
+        console.error("Greeting error:", err);
+        setMessages([{ role: "assistant", content: `Hi! I'm your ${activePersona.emoji} ${activePersona.label} ${category.name}. How can I help?` }]);
+        setIsTyping(false);
+      },
+    });
   }, [category, activePersona]);
 
   useEffect(() => {
@@ -102,60 +188,50 @@ const Chat = () => {
     }
   };
 
-  const handleSend = (text: string) => {
+  const handleSend = async (text: string) => {
     const userMsg: Msg = { role: "user", content: text };
-    setMessages((prev) => [...prev, userMsg]);
+    const updatedMessages = [...messages, userMsg];
+    setMessages(updatedMessages);
 
     if (checkSafety(text)) {
       setIsTyping(true);
       setTimeout(() => {
         setMessages((prev) => [...prev, { role: "assistant", content: SAFETY_RESPONSE }]);
         setIsTyping(false);
-      }, 600);
+      }, 400);
       return;
     }
 
-    // Simulated persona-aware responses (will be replaced by AI)
     setIsTyping(true);
-    setTimeout(() => {
-      const personaResponses: Record<string, string[]> = {
-        friendly: [
-          "That's a great point! I really appreciate you bringing this up.",
-          "I hear you. Let's figure this out together, shall we?",
-          "Thanks for sharing that — how can I help make this better?",
-        ],
-        hostile: [
-          "Is that really the best you can come up with?",
-          "I don't have time for excuses. What's your plan to fix this?",
-          "Everyone else seems to manage just fine. What's your excuse?",
-        ],
-        suspicious: [
-          "Interesting… and who else was involved in this decision?",
-          "That doesn't quite add up. Can you walk me through the details again?",
-          "Hmm. I'll need to verify this. Send me the documentation.",
-        ],
-        passive: [
-          "Sure, that's *fine*. I mean, it's not how I would have done it, but…",
-          "Oh no, I'm not upset. Why would I be upset? 🙃",
-          "That's… interesting. I'm sure you tried your best.",
-        ],
-        mentor: [
-          "Good thinking. Now let me challenge you — have you considered the flip side?",
-          "That shows real growth. Here's how you can take it to the next level…",
-          "I went through something similar early in my career. Let me share what I learned.",
-        ],
-      };
+    const systemPrompt = buildSystemPrompt(
+      category!.name,
+      category!.basePrompt,
+      activePersona,
+      activeScenario,
+    );
 
-      const pid = activePersona?.id || "friendly";
-      const pool = personaResponses[pid] || [
-        "That's interesting — tell me more.",
-        "I see. How does that make you feel?",
-        "Let me think about that for a moment…",
-      ];
-      const reply = pool[Math.floor(Math.random() * pool.length)];
-      setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
-      setIsTyping(false);
-    }, 1000 + Math.random() * 1000);
+    let assistantSoFar = "";
+    const upsert = (chunk: string) => {
+      assistantSoFar += chunk;
+      setMessages((prev) => {
+        const last = prev[prev.length - 1];
+        if (last?.role === "assistant" && assistantSoFar.startsWith(last.content.slice(0, 20))) {
+          return [...prev.slice(0, -1), { role: "assistant", content: assistantSoFar }];
+        }
+        return [...prev, { role: "assistant" as const, content: assistantSoFar }];
+      });
+    };
+
+    await streamChat({
+      messages: updatedMessages,
+      systemPrompt,
+      onDelta: upsert,
+      onDone: () => setIsTyping(false),
+      onError: (err) => {
+        toast.error(err);
+        setIsTyping(false);
+      },
+    });
   };
 
   if (!category) {
@@ -170,7 +246,6 @@ const Chat = () => {
 
   return (
     <div className="flex h-screen flex-col bg-background">
-      {/* Chat Header */}
       <header className="flex items-center gap-3 border-b border-border bg-card px-4 py-3">
         <button onClick={() => navigate("/")} className="rounded-lg p-2 text-muted-foreground hover:bg-secondary transition-colors">
           <ArrowLeft className="h-5 w-5" />
@@ -185,7 +260,9 @@ const Chat = () => {
           <h2 className="font-display text-sm font-semibold text-foreground">
             {category.name} {activePersona && <span className="font-sans text-xs text-muted-foreground">· {activePersona.emoji} {activePersona.label}</span>}
           </h2>
-          <p className="text-xs text-muted-foreground">Conversation practice</p>
+          <p className="text-xs text-muted-foreground">
+            Conversation practice{activeScenario ? ` · ${activeScenario.emoji} ${activeScenario.label}` : ""}
+          </p>
         </div>
         <div className="flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1">
           <Shield className="h-3.5 w-3.5 text-primary" />
@@ -193,7 +270,6 @@ const Chat = () => {
         </div>
       </header>
 
-      {/* Persona Selector */}
       {activePersona && (
         <PersonaSelector
           personas={category.personas}
@@ -202,7 +278,6 @@ const Chat = () => {
         />
       )}
 
-      {/* Scenario Selector */}
       {category && (
         <ScenarioSelector
           scenarios={category.scenarios}
@@ -211,7 +286,6 @@ const Chat = () => {
         />
       )}
 
-      {/* Messages */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-6">
         <div className="mx-auto flex max-w-2xl flex-col gap-3">
           <motion.div
@@ -226,11 +300,10 @@ const Chat = () => {
           {messages.map((msg, i) => (
             <ChatMessage key={i} role={msg.role} content={msg.content} />
           ))}
-          {isTyping && <TypingIndicator />}
+          {isTyping && messages[messages.length - 1]?.role !== "assistant" && <TypingIndicator />}
         </div>
       </div>
 
-      {/* Input */}
       <div className="mx-auto w-full max-w-2xl">
         <ChatInput onSend={handleSend} disabled={isTyping} />
       </div>

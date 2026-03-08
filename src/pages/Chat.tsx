@@ -16,17 +16,23 @@ type Msg = { role: "user" | "assistant"; content: string };
 
 const SAFETY_KEYWORDS = [
   "kill myself", "suicide", "end my life", "want to die",
-  "hurt myself", "self harm", "child porn", "cp ", "underage",
-  "sexual harassment", "rape", "bomb", "shoot up", "terrorism",
+  "hurt myself", "self harm", "self-harm", "child porn", "cp ", "underage",
+  "sexual harassment", "rape", "molest", "bomb", "shoot up", "terrorism",
+  "kill you", "kill him", "kill her", "kill them", "murder",
+  "stab", "assault", "abuse", "trafficking", "kidnap",
+  "incite violence", "hate crime", "ethnic cleansing", "genocide",
 ];
 
-const SAFETY_RESPONSE = `I notice this conversation has touched on something very serious. If you or someone you know is in crisis, please reach out:
+const SAFETY_RESPONSE = `⚠️ **This type of content is not supported.**
 
+This conversation practice tool does not allow messages that involve violence, self-harm, sexual harassment, exploitation, or any form of harmful or illegal behavior.
+
+If you or someone you know is in crisis, please reach out:
 🆘 **National Suicide Prevention Lifeline**: 988 (US)
 🆘 **Crisis Text Line**: Text HOME to 741741
 🆘 **Emergency**: Call 911
 
-This is a practice tool and cannot provide real help in emergencies. Please reach out to a professional. ❤️`;
+Please keep the conversation safe and respectful. ❤️`;
 
 function checkSafety(text: string): boolean {
   const lower = text.toLowerCase();

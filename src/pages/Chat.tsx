@@ -37,6 +37,7 @@ function buildSystemPrompt(
   basePrompt: string,
   persona: Persona | null,
   scenario: Scenario | null,
+  customScenario: string,
 ): string {
   let prompt = `${basePrompt}\n\nIMPORTANT RULES:
 - Stay in character at all times as a ${categoryName}.
@@ -49,6 +50,8 @@ function buildSystemPrompt(
   }
   if (scenario) {
     prompt += `\n\nCurrent scenario: ${scenario.label}. ${scenario.promptModifier}`;
+  } else if (customScenario) {
+    prompt += `\n\nCurrent scenario (user-defined): ${customScenario}\nAdapt your behavior and responses to fit this situation while staying in character.`;
   }
   return prompt;
 }
@@ -124,6 +127,7 @@ const Chat = () => {
   const [isTyping, setIsTyping] = useState(false);
   const [activePersona, setActivePersona] = useState<Persona | null>(null);
   const [activeScenario, setActiveScenario] = useState<Scenario | null>(null);
+  const [customScenario, setCustomScenario] = useState("");
 
   useEffect(() => {
     if (category && category.personas.length > 0) {
@@ -137,7 +141,7 @@ const Chat = () => {
     setIsTyping(true);
     setMessages([]);
 
-    const systemPrompt = buildSystemPrompt(category.name, category.basePrompt, activePersona, activeScenario);
+    const systemPrompt = buildSystemPrompt(category.name, category.basePrompt, activePersona, activeScenario, customScenario);
     const greetingRequest: Msg[] = [
       { role: "user", content: "Start the conversation with a short, natural greeting in character. Don't mention that you're an AI or roleplay bot." },
     ];
@@ -175,6 +179,7 @@ const Chat = () => {
   const handleScenarioSwitch = (scenario: Scenario | null) => {
     if (scenario?.id === activeScenario?.id) return;
     setActiveScenario(scenario);
+    setCustomScenario("");
     if (scenario) {
       setMessages((prev) => [
         ...prev,
@@ -184,6 +189,18 @@ const Chat = () => {
       setMessages((prev) => [
         ...prev,
         { role: "assistant", content: `*Scenario cleared* — we're back to a free conversation. What's on your mind?` },
+      ]);
+    }
+  };
+
+  const handleCustomScenario = (text: string) => {
+    if (text === customScenario) return;
+    setCustomScenario(text);
+    setActiveScenario(null);
+    if (text) {
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: `*Custom scene set: ✍️ ${text}*\n\nGot it — I'll adapt to this situation. Go ahead, what would you say?` },
       ]);
     }
   };
@@ -208,6 +225,7 @@ const Chat = () => {
       category!.basePrompt,
       activePersona,
       activeScenario,
+      customScenario,
     );
 
     let assistantSoFar = "";
@@ -282,7 +300,9 @@ const Chat = () => {
         <ScenarioSelector
           scenarios={category.scenarios}
           activeId={activeScenario?.id || null}
+          customScenario={customScenario}
           onSelect={handleScenarioSwitch}
+          onCustomScenario={handleCustomScenario}
         />
       )}
 

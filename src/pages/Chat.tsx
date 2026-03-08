@@ -179,6 +179,7 @@ const Chat = () => {
   const handleScenarioSwitch = (scenario: Scenario | null) => {
     if (scenario?.id === activeScenario?.id) return;
     setActiveScenario(scenario);
+    setCustomScenario("");
     if (scenario) {
       setMessages((prev) => [
         ...prev,

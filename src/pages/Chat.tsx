@@ -2,11 +2,12 @@ import { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, Shield } from "lucide-react";
-import { categories, type Persona } from "@/data/categories";
+import { categories, type Persona, type Scenario } from "@/data/categories";
 import ChatMessage from "@/components/ChatMessage";
 import ChatInput from "@/components/ChatInput";
 import TypingIndicator from "@/components/TypingIndicator";
 import PersonaSelector from "@/components/PersonaSelector";
+import ScenarioSelector from "@/components/ScenarioSelector";
 
 type Msg = { role: "user" | "assistant"; content: string };
 

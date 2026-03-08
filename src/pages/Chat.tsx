@@ -144,6 +144,7 @@ const Chat = () => {
   const [responseStyle, setResponseStyle] = useState<ResponseStyle>({ emotionalTone: "neutral", communicationStyle: "direct" });
   const [pendingOptions, setPendingOptions] = useState<ResponseOption[] | null>(null);
   const [isLoadingOptions, setIsLoadingOptions] = useState(false);
+  const lastUserMessages = useRef<Msg[] | null>(null);
 
   useEffect(() => {
     if (category && category.personas.length > 0) {

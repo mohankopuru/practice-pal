@@ -144,6 +144,7 @@ const Chat = () => {
   const [responseStyle, setResponseStyle] = useState<ResponseStyle>({ emotionalTone: "neutral", communicationStyle: "direct" });
   const [pendingOptions, setPendingOptions] = useState<ResponseOption[] | null>(null);
   const [isLoadingOptions, setIsLoadingOptions] = useState(false);
+  const lastUserMessages = useRef<Msg[] | null>(null);
 
   useEffect(() => {
     if (category && category.personas.length > 0) {
@@ -186,6 +187,31 @@ const Chat = () => {
 
   const getSystemPrompt = () =>
     buildSystemPrompt(category!.name, category!.basePrompt, activePersona, activeScenario, customScenario, responseStyle);
+
+  // Regenerate options when tone/style changes while options are pending
+  useEffect(() => {
+    if (!lastUserMessages.current || (!pendingOptions && !isLoadingOptions)) return;
+    const msgs = lastUserMessages.current;
+    let cancelled = false;
+
+    const regenerate = async () => {
+      setIsLoadingOptions(true);
+      setPendingOptions(null);
+      try {
+        const prompt = buildSystemPrompt(category!.name, category!.basePrompt, activePersona, activeScenario, customScenario, responseStyle);
+        const options = await fetchResponseOptions(msgs, prompt);
+        if (!cancelled && options.length > 0) {
+          setPendingOptions(options);
+        }
+      } catch (err) {
+        console.error("Regenerate error:", err);
+      } finally {
+        if (!cancelled) setIsLoadingOptions(false);
+      }
+    };
+    regenerate();
+    return () => { cancelled = true; };
+  }, [responseStyle.emotionalTone, responseStyle.communicationStyle]);
 
   const handlePersonaSwitch = (persona: Persona) => {
     if (persona.id === activePersona?.id) return;
@@ -230,6 +256,7 @@ const Chat = () => {
 
   const handleOptionSelect = (option: ResponseOption) => {
     setPendingOptions(null);
+    lastUserMessages.current = null;
     setMessages((prev) => [...prev, { role: "assistant", content: option.message }]);
   };
 
@@ -238,6 +265,7 @@ const Chat = () => {
     const updatedMessages = [...messages, userMsg];
     setMessages(updatedMessages);
     setPendingOptions(null);
+    lastUserMessages.current = updatedMessages;
 
     if (checkSafety(text)) {
       setIsTyping(true);

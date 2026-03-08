@@ -149,7 +149,7 @@ const Chat = () => {
     setIsTyping(true);
     setMessages([]);
 
-    const systemPrompt = buildSystemPrompt(category.name, category.basePrompt, activePersona, activeScenario, customScenario);
+    const systemPrompt = buildSystemPrompt(category.name, category.basePrompt, activePersona, activeScenario, customScenario, responseStyle);
     const greetingRequest: Msg[] = [
       { role: "user", content: "Start the conversation with a short, natural greeting in character. Don't mention that you're an AI or roleplay bot." },
     ];

@@ -265,6 +265,7 @@ const Chat = () => {
     const updatedMessages = [...messages, userMsg];
     setMessages(updatedMessages);
     setPendingOptions(null);
+    lastUserMessages.current = updatedMessages;
 
     if (checkSafety(text)) {
       setIsTyping(true);

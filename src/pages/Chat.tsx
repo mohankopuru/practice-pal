@@ -224,6 +224,7 @@ const Chat = () => {
       category!.basePrompt,
       activePersona,
       activeScenario,
+      customScenario,
     );
 
     let assistantSoFar = "";

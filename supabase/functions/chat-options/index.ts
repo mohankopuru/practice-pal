@@ -16,7 +16,7 @@ serve(async (req) => {
 
     const optionsSystemPrompt = `${systemPrompt}
 
-IMPORTANT: You must generate exactly 3 different possible responses to the user's last message. Each response should reflect a DIFFERENT reaction the character might have — ranging from best-case to worst-case, or varying in emotional intensity. Each option should feel like something a real person with this personality might actually say. Keep each response to 1-3 sentences. Also provide a short label (2-4 words) describing the tone/approach of each option.`;
+IMPORTANT: You must generate exactly 5 different possible responses to the user's last message. Each response MUST reflect a distinctly DIFFERENT emotional tone and communication approach — for example: supportive, dismissive, angry, sarcastic, anxious, curious, cold, warm, passive-aggressive, confrontational, empathetic, etc. Cover a wide emotional range from best-case to worst-case reactions. Each option should feel like something a real person with this personality might actually say in different moods. Keep each response to 1-3 sentences. Also provide a short label (2-4 words) describing the tone/approach of each option.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",

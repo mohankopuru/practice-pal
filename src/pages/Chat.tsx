@@ -39,6 +39,7 @@ const Chat = () => {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const [activePersona, setActivePersona] = useState<Persona | null>(null);
+  const [activeScenario, setActiveScenario] = useState<Scenario | null>(null);
 
   // Set default persona on load
   useEffect(() => {

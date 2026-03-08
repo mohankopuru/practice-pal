@@ -8,6 +8,7 @@ import ChatInput from "@/components/ChatInput";
 import TypingIndicator from "@/components/TypingIndicator";
 import PersonaSelector from "@/components/PersonaSelector";
 import ScenarioSelector from "@/components/ScenarioSelector";
+import ResponseStyleSelector, { type ResponseStyle } from "@/components/ResponseStyleSelector";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -38,6 +39,7 @@ function buildSystemPrompt(
   persona: Persona | null,
   scenario: Scenario | null,
   customScenario: string,
+  responseStyle: ResponseStyle,
 ): string {
   let prompt = `${basePrompt}\n\nIMPORTANT RULES:
 - Stay in character at all times as a ${categoryName}.
@@ -53,6 +55,11 @@ function buildSystemPrompt(
   } else if (customScenario) {
     prompt += `\n\nCurrent scenario (user-defined): ${customScenario}\nAdapt your behavior and responses to fit this situation while staying in character.`;
   }
+
+  prompt += `\n\nRESPONSE STYLE:
+- Emotional tone: ${responseStyle.emotionalTone}. Match this energy level in your responses.
+- Communication style: ${responseStyle.communicationStyle}. Use this approach when responding.`;
+
   return prompt;
 }
 
@@ -128,6 +135,7 @@ const Chat = () => {
   const [activePersona, setActivePersona] = useState<Persona | null>(null);
   const [activeScenario, setActiveScenario] = useState<Scenario | null>(null);
   const [customScenario, setCustomScenario] = useState("");
+  const [responseStyle, setResponseStyle] = useState<ResponseStyle>({ emotionalTone: "neutral", communicationStyle: "direct" });
 
   useEffect(() => {
     if (category && category.personas.length > 0) {
@@ -141,7 +149,7 @@ const Chat = () => {
     setIsTyping(true);
     setMessages([]);
 
-    const systemPrompt = buildSystemPrompt(category.name, category.basePrompt, activePersona, activeScenario, customScenario);
+    const systemPrompt = buildSystemPrompt(category.name, category.basePrompt, activePersona, activeScenario, customScenario, responseStyle);
     const greetingRequest: Msg[] = [
       { role: "user", content: "Start the conversation with a short, natural greeting in character. Don't mention that you're an AI or roleplay bot." },
     ];
@@ -226,6 +234,7 @@ const Chat = () => {
       activePersona,
       activeScenario,
       customScenario,
+      responseStyle,
     );
 
     let assistantSoFar = "";
@@ -305,6 +314,8 @@ const Chat = () => {
           onCustomScenario={handleCustomScenario}
         />
       )}
+
+      <ResponseStyleSelector style={responseStyle} onChange={setResponseStyle} />
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-6">
         <div className="mx-auto flex max-w-2xl flex-col gap-3">

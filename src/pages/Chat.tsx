@@ -234,6 +234,7 @@ const Chat = () => {
       activePersona,
       activeScenario,
       customScenario,
+      responseStyle,
     );
 
     let assistantSoFar = "";

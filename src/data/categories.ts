@@ -17,6 +17,14 @@ export interface Persona {
   promptModifier: string;
 }
 
+export interface Scenario {
+  id: string;
+  label: string;
+  emoji: string;
+  description: string;
+  promptModifier: string;
+}
+
 export interface Category {
   id: string;
   name: string;
@@ -25,6 +33,7 @@ export interface Category {
   color: string;
   basePrompt: string;
   personas: Persona[];
+  scenarios: Scenario[];
 }
 
 export const categories: Category[] = [

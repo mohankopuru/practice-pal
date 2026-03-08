@@ -135,6 +135,7 @@ const Chat = () => {
   const [activePersona, setActivePersona] = useState<Persona | null>(null);
   const [activeScenario, setActiveScenario] = useState<Scenario | null>(null);
   const [customScenario, setCustomScenario] = useState("");
+  const [responseStyle, setResponseStyle] = useState<ResponseStyle>({ emotionalTone: "neutral", communicationStyle: "direct" });
 
   useEffect(() => {
     if (category && category.personas.length > 0) {

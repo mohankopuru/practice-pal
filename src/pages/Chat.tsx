@@ -37,6 +37,7 @@ function buildSystemPrompt(
   basePrompt: string,
   persona: Persona | null,
   scenario: Scenario | null,
+  customScenario: string,
 ): string {
   let prompt = `${basePrompt}\n\nIMPORTANT RULES:
 - Stay in character at all times as a ${categoryName}.
@@ -49,6 +50,8 @@ function buildSystemPrompt(
   }
   if (scenario) {
     prompt += `\n\nCurrent scenario: ${scenario.label}. ${scenario.promptModifier}`;
+  } else if (customScenario) {
+    prompt += `\n\nCurrent scenario (user-defined): ${customScenario}\nAdapt your behavior and responses to fit this situation while staying in character.`;
   }
   return prompt;
 }

@@ -2,10 +2,11 @@ import { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, Shield } from "lucide-react";
-import { categories } from "@/data/categories";
+import { categories, type Persona } from "@/data/categories";
 import ChatMessage from "@/components/ChatMessage";
 import ChatInput from "@/components/ChatInput";
 import TypingIndicator from "@/components/TypingIndicator";
+import PersonaSelector from "@/components/PersonaSelector";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
@@ -36,39 +37,58 @@ const Chat = () => {
 
   const [messages, setMessages] = useState<Msg[]>([]);
   const [isTyping, setIsTyping] = useState(false);
+  const [activePersona, setActivePersona] = useState<Persona | null>(null);
+
+  // Set default persona on load
+  useEffect(() => {
+    if (category && category.personas.length > 0) {
+      setActivePersona(category.personas[0]);
+    }
+  }, [category]);
 
   useEffect(() => {
-    if (!category) return;
+    if (!category || !activePersona) return;
     // Initial greeting
     setIsTyping(true);
-    const greetings: Record<string, string> = {
-      friend: "Hey! What's up? 😊 How's your day going?",
-      partner: "Hi love ❤️ How was your day? I missed you!",
-      boss: "Good morning. Please have a seat. What would you like to discuss?",
-      spouse: "Hey hon, how was work today? I was thinking we should talk about something…",
-      coworker: "Hey! Grab some coffee yet? I just came from that meeting — wild stuff.",
-      therapist: "Welcome. I'm glad you're here today. How are you feeling? Take your time.",
-      shopkeeper: "Welcome to our store! Can I help you find anything today?",
-      interviewer: "Thank you for coming in today. Please take a seat. Shall we begin?",
+    const greetings: Record<string, Record<string, string>> = {
+      boss: {
+        friendly: "Hey! Come on in, grab a seat. How's everything going? 😊",
+        hostile: "You're late. Sit down. We need to talk about your performance.",
+        suspicious: "Close the door. I've been looking at some numbers and I have questions…",
+        passive: "Oh, you're here. *That's* nice. I didn't think you'd make it today.",
+        mentor: "Good morning! I've been thinking about your career development. Let's chat.",
+      },
     };
+
+    const categoryGreetings = greetings[category.id];
+    const greeting = categoryGreetings?.[activePersona.id]
+      || `Hi! I'm your ${activePersona.emoji} ${activePersona.label} ${category.name}. How can I help?`;
+
     const timeout = setTimeout(() => {
-      setMessages([
-        { role: "assistant", content: greetings[category.id] || `Hi! I'm your ${category.name}. How can I help?` },
-      ]);
+      setMessages([{ role: "assistant", content: greeting }]);
       setIsTyping(false);
     }, 800);
     return () => clearTimeout(timeout);
-  }, [category]);
+  }, [category, activePersona]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, isTyping]);
 
+  const handlePersonaSwitch = (persona: Persona) => {
+    if (persona.id === activePersona?.id) return;
+    setActivePersona(persona);
+    // Add a system message to indicate the switch
+    setMessages((prev) => [
+      ...prev,
+      { role: "assistant", content: `*switches to ${persona.emoji} ${persona.label} mode*\n\nAlright, let's continue. What were you saying?` },
+    ]);
+  };
+
   const handleSend = (text: string) => {
     const userMsg: Msg = { role: "user", content: text };
     setMessages((prev) => [...prev, userMsg]);
 
-    // Safety check
     if (checkSafety(text)) {
       setIsTyping(true);
       setTimeout(() => {
@@ -78,17 +98,44 @@ const Chat = () => {
       return;
     }
 
-    // Simulated response (will be replaced by Lovable AI)
+    // Simulated persona-aware responses (will be replaced by AI)
     setIsTyping(true);
     setTimeout(() => {
-      const responses = [
-        "That's really interesting — tell me more about that.",
-        "I hear you. How does that make you feel?",
-        "That's a great point. Let me think about that for a moment…",
-        "I appreciate you sharing that with me. Can you elaborate?",
-        "Hmm, I see where you're coming from. What do you think the next step should be?",
+      const personaResponses: Record<string, string[]> = {
+        friendly: [
+          "That's a great point! I really appreciate you bringing this up.",
+          "I hear you. Let's figure this out together, shall we?",
+          "Thanks for sharing that — how can I help make this better?",
+        ],
+        hostile: [
+          "Is that really the best you can come up with?",
+          "I don't have time for excuses. What's your plan to fix this?",
+          "Everyone else seems to manage just fine. What's your excuse?",
+        ],
+        suspicious: [
+          "Interesting… and who else was involved in this decision?",
+          "That doesn't quite add up. Can you walk me through the details again?",
+          "Hmm. I'll need to verify this. Send me the documentation.",
+        ],
+        passive: [
+          "Sure, that's *fine*. I mean, it's not how I would have done it, but…",
+          "Oh no, I'm not upset. Why would I be upset? 🙃",
+          "That's… interesting. I'm sure you tried your best.",
+        ],
+        mentor: [
+          "Good thinking. Now let me challenge you — have you considered the flip side?",
+          "That shows real growth. Here's how you can take it to the next level…",
+          "I went through something similar early in my career. Let me share what I learned.",
+        ],
+      };
+
+      const pid = activePersona?.id || "friendly";
+      const pool = personaResponses[pid] || [
+        "That's interesting — tell me more.",
+        "I see. How does that make you feel?",
+        "Let me think about that for a moment…",
       ];
-      const reply = responses[Math.floor(Math.random() * responses.length)];
+      const reply = pool[Math.floor(Math.random() * pool.length)];
       setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
       setIsTyping(false);
     }, 1000 + Math.random() * 1000);
@@ -118,14 +165,25 @@ const Chat = () => {
           <Icon className="h-5 w-5" />
         </div>
         <div className="flex-1">
-          <h2 className="font-display text-sm font-semibold text-foreground">{category.name}</h2>
+          <h2 className="font-display text-sm font-semibold text-foreground">
+            {category.name} {activePersona && <span className="font-sans text-xs text-muted-foreground">· {activePersona.emoji} {activePersona.label}</span>}
+          </h2>
           <p className="text-xs text-muted-foreground">Conversation practice</p>
         </div>
         <div className="flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1">
           <Shield className="h-3.5 w-3.5 text-primary" />
-          <span className="text-xs font-medium text-primary">Safe mode</span>
+          <span className="text-xs font-medium text-primary">Safe</span>
         </div>
       </header>
+
+      {/* Persona Selector */}
+      {activePersona && (
+        <PersonaSelector
+          personas={category.personas}
+          activeId={activePersona.id}
+          onSelect={handlePersonaSwitch}
+        />
+      )}
 
       {/* Messages */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-6">
@@ -136,7 +194,7 @@ const Chat = () => {
             className="mb-4 flex items-center justify-center"
           >
             <span className="rounded-full bg-secondary px-3 py-1 text-xs text-muted-foreground">
-              This is a practice conversation — not real advice
+              Practice conversation — switch personas anytime ↑
             </span>
           </motion.div>
           {messages.map((msg, i) => (

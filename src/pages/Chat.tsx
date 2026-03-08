@@ -188,6 +188,31 @@ const Chat = () => {
   const getSystemPrompt = () =>
     buildSystemPrompt(category!.name, category!.basePrompt, activePersona, activeScenario, customScenario, responseStyle);
 
+  // Regenerate options when tone/style changes while options are pending
+  useEffect(() => {
+    if (!lastUserMessages.current || (!pendingOptions && !isLoadingOptions)) return;
+    const msgs = lastUserMessages.current;
+    let cancelled = false;
+
+    const regenerate = async () => {
+      setIsLoadingOptions(true);
+      setPendingOptions(null);
+      try {
+        const prompt = buildSystemPrompt(category!.name, category!.basePrompt, activePersona, activeScenario, customScenario, responseStyle);
+        const options = await fetchResponseOptions(msgs, prompt);
+        if (!cancelled && options.length > 0) {
+          setPendingOptions(options);
+        }
+      } catch (err) {
+        console.error("Regenerate error:", err);
+      } finally {
+        if (!cancelled) setIsLoadingOptions(false);
+      }
+    };
+    regenerate();
+    return () => { cancelled = true; };
+  }, [responseStyle.emotionalTone, responseStyle.communicationStyle]);
+
   const handlePersonaSwitch = (persona: Persona) => {
     if (persona.id === activePersona?.id) return;
     setActivePersona(persona);

@@ -127,6 +127,7 @@ const Chat = () => {
   const [isTyping, setIsTyping] = useState(false);
   const [activePersona, setActivePersona] = useState<Persona | null>(null);
   const [activeScenario, setActiveScenario] = useState<Scenario | null>(null);
+  const [customScenario, setCustomScenario] = useState("");
 
   useEffect(() => {
     if (category && category.personas.length > 0) {

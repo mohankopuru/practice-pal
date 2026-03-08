@@ -256,6 +256,7 @@ const Chat = () => {
 
   const handleOptionSelect = (option: ResponseOption) => {
     setPendingOptions(null);
+    lastUserMessages.current = null;
     setMessages((prev) => [...prev, { role: "assistant", content: option.message }]);
   };
 

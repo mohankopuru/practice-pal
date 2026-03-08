@@ -8,6 +8,7 @@ import ChatInput from "@/components/ChatInput";
 import TypingIndicator from "@/components/TypingIndicator";
 import PersonaSelector from "@/components/PersonaSelector";
 import ScenarioSelector from "@/components/ScenarioSelector";
+import ResponseStyleSelector, { type ResponseStyle } from "@/components/ResponseStyleSelector";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 

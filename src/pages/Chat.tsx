@@ -286,7 +286,9 @@ const Chat = () => {
         <ScenarioSelector
           scenarios={category.scenarios}
           activeId={activeScenario?.id || null}
+          customScenario={customScenario}
           onSelect={handleScenarioSwitch}
+          onCustomScenario={handleCustomScenario}
         />
       )}
 

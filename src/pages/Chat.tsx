@@ -2,11 +2,12 @@ import { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, Shield } from "lucide-react";
-import { categories, type Persona } from "@/data/categories";
+import { categories, type Persona, type Scenario } from "@/data/categories";
 import ChatMessage from "@/components/ChatMessage";
 import ChatInput from "@/components/ChatInput";
 import TypingIndicator from "@/components/TypingIndicator";
 import PersonaSelector from "@/components/PersonaSelector";
+import ScenarioSelector from "@/components/ScenarioSelector";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
@@ -38,6 +39,7 @@ const Chat = () => {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const [activePersona, setActivePersona] = useState<Persona | null>(null);
+  const [activeScenario, setActiveScenario] = useState<Scenario | null>(null);
 
   // Set default persona on load
   useEffect(() => {
@@ -78,11 +80,26 @@ const Chat = () => {
   const handlePersonaSwitch = (persona: Persona) => {
     if (persona.id === activePersona?.id) return;
     setActivePersona(persona);
-    // Add a system message to indicate the switch
     setMessages((prev) => [
       ...prev,
       { role: "assistant", content: `*switches to ${persona.emoji} ${persona.label} mode*\n\nAlright, let's continue. What were you saying?` },
     ]);
+  };
+
+  const handleScenarioSwitch = (scenario: Scenario | null) => {
+    if (scenario?.id === activeScenario?.id) return;
+    setActiveScenario(scenario);
+    if (scenario) {
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: `*Scene set: ${scenario.emoji} ${scenario.label}*\n\n${scenario.description}. Let's go — what would you like to say?` },
+      ]);
+    } else {
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: `*Scenario cleared* — we're back to a free conversation. What's on your mind?` },
+      ]);
+    }
   };
 
   const handleSend = (text: string) => {
@@ -182,6 +199,15 @@ const Chat = () => {
           personas={category.personas}
           activeId={activePersona.id}
           onSelect={handlePersonaSwitch}
+        />
+      )}
+
+      {/* Scenario Selector */}
+      {category && (
+        <ScenarioSelector
+          scenarios={category.scenarios}
+          activeId={activeScenario?.id || null}
+          onSelect={handleScenarioSwitch}
         />
       )}
 

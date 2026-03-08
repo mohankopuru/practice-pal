@@ -17,6 +17,14 @@ export interface Persona {
   promptModifier: string;
 }
 
+export interface Scenario {
+  id: string;
+  label: string;
+  emoji: string;
+  description: string;
+  promptModifier: string;
+}
+
 export interface Category {
   id: string;
   name: string;
@@ -25,6 +33,7 @@ export interface Category {
   color: string;
   basePrompt: string;
   personas: Persona[];
+  scenarios: Scenario[];
 }
 
 export const categories: Category[] = [
@@ -42,6 +51,13 @@ export const categories: Category[] = [
       { id: "gossip", label: "Gossipy", emoji: "🫢", promptModifier: "Love sharing rumors and drama. Always have the latest tea. Be nosy and curious about everyone's business." },
       { id: "distant", label: "Distant", emoji: "😐", promptModifier: "Be somewhat disengaged, give short replies, seem distracted. The user needs to work to keep the conversation going." },
     ],
+    scenarios: [
+      { id: "catching-up", label: "Catching Up", emoji: "☕", description: "Casual catch-up after not seeing each other for a while", promptModifier: "You haven't seen each other in months. Catch up on life updates." },
+      { id: "bad-news", label: "Breaking Bad News", emoji: "😔", description: "Sharing difficult or disappointing news", promptModifier: "The user needs to share some bad news with you. React naturally." },
+      { id: "asking-favor", label: "Asking a Favor", emoji: "🙏", description: "Requesting help or a big favor", promptModifier: "The user is about to ask you for a significant favor." },
+      { id: "confrontation", label: "Confrontation", emoji: "⚡", description: "Addressing something that's been bothering you", promptModifier: "There's tension between you two about something. Navigate the confrontation." },
+      { id: "celebration", label: "Celebration", emoji: "🎉", description: "Celebrating good news together", promptModifier: "Something great just happened. Celebrate together!" },
+    ],
   },
   {
     id: "partner",
@@ -56,6 +72,13 @@ export const categories: Category[] = [
       { id: "avoidant", label: "Avoidant", emoji: "🚶", promptModifier: "Be emotionally distant, deflect deep conversations, change the subject. Make the user work for emotional connection." },
       { id: "argumentative", label: "Argumentative", emoji: "🔥", promptModifier: "Be quick to disagree, bring up past issues, be defensive. Make the user practice conflict resolution." },
       { id: "needy", label: "Needy", emoji: "🥺", promptModifier: "Constantly seek validation and attention. Ask if they still love you. Be clingy but well-meaning." },
+    ],
+    scenarios: [
+      { id: "dtf-talk", label: "Define the Relationship", emoji: "💬", description: "Having 'the talk' about where things are going", promptModifier: "You need to discuss where this relationship is heading." },
+      { id: "meeting-parents", label: "Meeting the Parents", emoji: "👨‍👩‍👧", description: "Preparing for or debriefing after meeting parents", promptModifier: "Discuss plans or reactions around meeting each other's parents." },
+      { id: "argument-makeup", label: "After an Argument", emoji: "🕊️", description: "Making up after a fight", promptModifier: "You just had a big argument and are trying to reconcile." },
+      { id: "future-plans", label: "Future Plans", emoji: "🏡", description: "Discussing long-term plans and goals", promptModifier: "Talk about moving in, marriage, career plans, or life goals together." },
+      { id: "trust-issue", label: "Trust Issue", emoji: "🔍", description: "Addressing a breach of trust", promptModifier: "Something has shaken the trust between you. Address it." },
     ],
   },
   {
@@ -72,6 +95,14 @@ export const categories: Category[] = [
       { id: "passive", label: "Passive-aggressive", emoji: "🙃", promptModifier: "Be indirect with criticism, use backhanded compliments, say 'fine' when it's not. Leave passive-aggressive notes and emails." },
       { id: "mentor", label: "Mentor", emoji: "🎓", promptModifier: "Be wise and guiding. Share career advice, provide constructive feedback, help set professional goals. Invest in employee development." },
     ],
+    scenarios: [
+      { id: "salary-negotiation", label: "Salary Negotiation", emoji: "💰", description: "Asking for a raise or negotiating compensation", promptModifier: "The employee wants to discuss their salary. React based on your persona." },
+      { id: "performance-review", label: "Performance Review", emoji: "📊", description: "Annual or quarterly performance review", promptModifier: "You're conducting a performance review of the employee." },
+      { id: "asking-time-off", label: "Requesting Time Off", emoji: "🏖️", description: "Asking for vacation or personal leave", promptModifier: "The employee is requesting time off. Respond according to your persona." },
+      { id: "reporting-issue", label: "Reporting a Problem", emoji: "🚨", description: "Bringing up a workplace issue or conflict", promptModifier: "The employee is reporting a workplace problem to you." },
+      { id: "resignation", label: "Giving Notice", emoji: "📝", description: "Submitting a resignation or discussing leaving", promptModifier: "The employee may be hinting at or directly giving their resignation." },
+      { id: "promotion-ask", label: "Asking for Promotion", emoji: "📈", description: "Making a case for a promotion", promptModifier: "The employee wants to discuss a promotion opportunity." },
+    ],
   },
   {
     id: "spouse",
@@ -86,6 +117,13 @@ export const categories: Category[] = [
       { id: "controlling", label: "Controlling", emoji: "📋", promptModifier: "Want things done your way. Manage the household rigidly, criticize how things are done, make unilateral decisions." },
       { id: "disconnected", label: "Disconnected", emoji: "📱", promptModifier: "Be emotionally checked out, always on your phone, not fully present. Give half-attention to conversations." },
       { id: "romantic", label: "Romantic", emoji: "🌹", promptModifier: "Be affectionate and try to rekindle the spark. Plan date nights, leave sweet notes, be playful and loving." },
+    ],
+    scenarios: [
+      { id: "budget-talk", label: "Budget Discussion", emoji: "💳", description: "Discussing finances and spending habits", promptModifier: "You need to discuss household finances, budgeting, or a big purchase." },
+      { id: "parenting", label: "Parenting Decision", emoji: "👶", description: "Making a decision about the kids", promptModifier: "There's a parenting decision that needs to be made together." },
+      { id: "chores", label: "Household Chores", emoji: "🧹", description: "Dividing responsibilities fairly", promptModifier: "The division of household chores needs to be discussed." },
+      { id: "inlaws", label: "In-Law Issues", emoji: "👪", description: "Navigating in-law relationships", promptModifier: "There's a situation involving in-laws that needs addressing." },
+      { id: "date-night", label: "Planning Date Night", emoji: "🍷", description: "Making time for each other", promptModifier: "You're trying to plan quality time together." },
     ],
   },
   {
@@ -102,6 +140,13 @@ export const categories: Category[] = [
       { id: "overachiever", label: "Overachiever", emoji: "⚡", promptModifier: "Be intensely driven, always volunteering, subtly make others look bad by comparison. Send emails at 2am." },
       { id: "complainer", label: "Complainer", emoji: "😤", promptModifier: "Constantly complain about management, policies, workload. Be negative but seeking validation." },
     ],
+    scenarios: [
+      { id: "project-collab", label: "Project Collaboration", emoji: "🤝", description: "Working together on a shared project", promptModifier: "You're collaborating on a project with a tight deadline." },
+      { id: "office-gossip", label: "Office Gossip", emoji: "🫢", description: "Navigating workplace rumors", promptModifier: "There's some juicy office gossip going around." },
+      { id: "credit-stealing", label: "Taking Credit", emoji: "😤", description: "Someone took credit for your work", promptModifier: "There's a situation involving credit for work done." },
+      { id: "lunch-chat", label: "Lunch Break Chat", emoji: "🍕", description: "Casual lunch break conversation", promptModifier: "You're having a casual lunch break together." },
+      { id: "conflict", label: "Workplace Conflict", emoji: "⚔️", description: "Resolving a disagreement at work", promptModifier: "There's a disagreement about how to handle something at work." },
+    ],
   },
   {
     id: "therapist",
@@ -115,6 +160,13 @@ export const categories: Category[] = [
       { id: "analytical", label: "Analytical", emoji: "🧠", promptModifier: "Be more cognitive-behavioral. Identify thought patterns, challenge distortions, and focus on practical solutions." },
       { id: "direct", label: "Direct", emoji: "🎯", promptModifier: "Be straightforward and no-nonsense. Call out avoidance, give honest feedback, push for accountability." },
       { id: "holistic", label: "Holistic", emoji: "🌿", promptModifier: "Consider mind-body connection. Ask about sleep, exercise, diet. Suggest mindfulness, breathing exercises, and lifestyle changes." },
+    ],
+    scenarios: [
+      { id: "first-session", label: "First Session", emoji: "👋", description: "Your very first therapy appointment", promptModifier: "This is the client's first therapy session. Do an intake assessment." },
+      { id: "anxiety", label: "Anxiety Management", emoji: "😰", description: "Discussing anxiety and coping strategies", promptModifier: "The client wants to discuss anxiety and learn coping mechanisms." },
+      { id: "relationship-issues", label: "Relationship Issues", emoji: "💔", description: "Working through relationship problems", promptModifier: "The client wants to talk about relationship difficulties." },
+      { id: "grief", label: "Processing Grief", emoji: "🕊️", description: "Working through a loss", promptModifier: "The client is processing grief or a significant loss." },
+      { id: "self-esteem", label: "Self-Esteem", emoji: "🪞", description: "Building confidence and self-worth", promptModifier: "The client struggles with self-esteem and confidence." },
     ],
   },
   {
@@ -130,6 +182,12 @@ export const categories: Category[] = [
       { id: "rude", label: "Rude", emoji: "😒", promptModifier: "Be dismissive, impatient, and unhelpful. Act like the customer is wasting your time." },
       { id: "haggler", label: "Haggler", emoji: "🤝", promptModifier: "Be open to negotiation but shrewd. Counter-offer, bundle deals, play hardball but fair." },
     ],
+    scenarios: [
+      { id: "returning-item", label: "Returning an Item", emoji: "📦", description: "Trying to return or exchange a product", promptModifier: "The customer wants to return or exchange something." },
+      { id: "haggling", label: "Price Haggling", emoji: "💸", description: "Negotiating a better price", promptModifier: "The customer wants to negotiate the price." },
+      { id: "complaint", label: "Filing a Complaint", emoji: "😠", description: "Complaining about a product or service", promptModifier: "The customer has a complaint about a product or service." },
+      { id: "big-purchase", label: "Big Purchase", emoji: "🛒", description: "Making a major purchase decision", promptModifier: "The customer is considering a significant purchase." },
+    ],
   },
   {
     id: "interviewer",
@@ -143,6 +201,13 @@ export const categories: Category[] = [
       { id: "tough", label: "Tough", emoji: "💎", promptModifier: "Ask hard questions, challenge answers, use stress interview tactics. Test how they handle pressure." },
       { id: "technical", label: "Technical", emoji: "💻", promptModifier: "Focus on technical skills, ask problem-solving questions, dig deep into knowledge and experience." },
       { id: "behavioral", label: "Behavioral", emoji: "📊", promptModifier: "Focus on STAR method questions. 'Tell me about a time when...' Assess soft skills, teamwork, leadership." },
+    ],
+    scenarios: [
+      { id: "first-round", label: "First Round", emoji: "1️⃣", description: "Initial screening interview", promptModifier: "This is a first-round screening interview. Keep it broad." },
+      { id: "final-round", label: "Final Round", emoji: "🏁", description: "Final interview with senior leadership", promptModifier: "This is the final interview round with a senior leader." },
+      { id: "salary-discussion", label: "Salary Discussion", emoji: "💰", description: "Negotiating compensation package", promptModifier: "The interview has reached the compensation discussion phase." },
+      { id: "case-study", label: "Case Study", emoji: "📋", description: "Working through a business case", promptModifier: "Present a business case for the candidate to work through." },
+      { id: "culture-fit", label: "Culture Fit", emoji: "🏢", description: "Assessing team and company culture alignment", promptModifier: "Focus on assessing whether the candidate fits the team culture." },
     ],
   },
 ];

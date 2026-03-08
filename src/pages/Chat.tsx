@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, Shield } from "lucide-react";
@@ -9,7 +9,7 @@ import TypingIndicator from "@/components/TypingIndicator";
 import PersonaSelector from "@/components/PersonaSelector";
 import ScenarioSelector from "@/components/ScenarioSelector";
 import ResponseStyleSelector, { type ResponseStyle } from "@/components/ResponseStyleSelector";
-import { supabase } from "@/integrations/supabase/client";
+import ResponseOptions, { type ResponseOption } from "@/components/ResponseOptions";
 import { toast } from "sonner";
 
 type Msg = { role: "user" | "assistant"; content: string };
@@ -63,46 +63,35 @@ function buildSystemPrompt(
   return prompt;
 }
 
-const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
+const BASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const AUTH_HEADER = { Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` };
 
-async function streamChat({
-  messages,
-  systemPrompt,
-  onDelta,
-  onDone,
-  onError,
-}: {
+async function streamChat(opts: {
   messages: Msg[];
   systemPrompt: string;
   onDelta: (text: string) => void;
   onDone: () => void;
   onError: (err: string) => void;
 }) {
-  const resp = await fetch(CHAT_URL, {
+  const resp = await fetch(`${BASE_URL}/functions/v1/chat`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-    },
-    body: JSON.stringify({ messages, systemPrompt }),
+    headers: { "Content-Type": "application/json", ...AUTH_HEADER },
+    body: JSON.stringify({ messages: opts.messages, systemPrompt: opts.systemPrompt }),
   });
-
   if (!resp.ok) {
     const body = await resp.json().catch(() => ({}));
-    onError(body.error || `Request failed (${resp.status})`);
+    opts.onError(body.error || `Request failed (${resp.status})`);
     return;
   }
-  if (!resp.body) { onError("No response body"); return; }
+  if (!resp.body) { opts.onError("No response body"); return; }
 
   const reader = resp.body.getReader();
   const decoder = new TextDecoder();
   let buf = "";
-
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
     buf += decoder.decode(value, { stream: true });
-
     let idx: number;
     while ((idx = buf.indexOf("\n")) !== -1) {
       let line = buf.slice(0, idx);
@@ -110,18 +99,35 @@ async function streamChat({
       if (line.endsWith("\r")) line = line.slice(0, -1);
       if (!line.startsWith("data: ")) continue;
       const json = line.slice(6).trim();
-      if (json === "[DONE]") { onDone(); return; }
+      if (json === "[DONE]") { opts.onDone(); return; }
       try {
         const parsed = JSON.parse(json);
         const content = parsed.choices?.[0]?.delta?.content;
-        if (content) onDelta(content);
+        if (content) opts.onDelta(content);
       } catch {
         buf = line + "\n" + buf;
         break;
       }
     }
   }
-  onDone();
+  opts.onDone();
+}
+
+async function fetchResponseOptions(
+  messages: Msg[],
+  systemPrompt: string,
+): Promise<ResponseOption[]> {
+  const resp = await fetch(`${BASE_URL}/functions/v1/chat-options`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...AUTH_HEADER },
+    body: JSON.stringify({ messages, systemPrompt }),
+  });
+  if (!resp.ok) {
+    const body = await resp.json().catch(() => ({}));
+    throw new Error(body.error || `Request failed (${resp.status})`);
+  }
+  const data = await resp.json();
+  return data.options || [];
 }
 
 const Chat = () => {
@@ -136,6 +142,8 @@ const Chat = () => {
   const [activeScenario, setActiveScenario] = useState<Scenario | null>(null);
   const [customScenario, setCustomScenario] = useState("");
   const [responseStyle, setResponseStyle] = useState<ResponseStyle>({ emotionalTone: "neutral", communicationStyle: "direct" });
+  const [pendingOptions, setPendingOptions] = useState<ResponseOption[] | null>(null);
+  const [isLoadingOptions, setIsLoadingOptions] = useState(false);
 
   useEffect(() => {
     if (category && category.personas.length > 0) {
@@ -143,11 +151,12 @@ const Chat = () => {
     }
   }, [category]);
 
-  // Generate initial greeting via AI
+  // Generate initial greeting via streaming
   useEffect(() => {
     if (!category || !activePersona) return;
     setIsTyping(true);
     setMessages([]);
+    setPendingOptions(null);
 
     const systemPrompt = buildSystemPrompt(category.name, category.basePrompt, activePersona, activeScenario, customScenario, responseStyle);
     const greetingRequest: Msg[] = [
@@ -173,11 +182,15 @@ const Chat = () => {
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages, isTyping]);
+  }, [messages, isTyping, pendingOptions, isLoadingOptions]);
+
+  const getSystemPrompt = () =>
+    buildSystemPrompt(category!.name, category!.basePrompt, activePersona, activeScenario, customScenario, responseStyle);
 
   const handlePersonaSwitch = (persona: Persona) => {
     if (persona.id === activePersona?.id) return;
     setActivePersona(persona);
+    setPendingOptions(null);
     setMessages((prev) => [
       ...prev,
       { role: "assistant", content: `*switches to ${persona.emoji} ${persona.label} mode*\n\nAlright, let's continue. What were you saying?` },
@@ -188,6 +201,7 @@ const Chat = () => {
     if (scenario?.id === activeScenario?.id) return;
     setActiveScenario(scenario);
     setCustomScenario("");
+    setPendingOptions(null);
     if (scenario) {
       setMessages((prev) => [
         ...prev,
@@ -205,6 +219,7 @@ const Chat = () => {
     if (text === customScenario) return;
     setCustomScenario(text);
     setActiveScenario(null);
+    setPendingOptions(null);
     if (text) {
       setMessages((prev) => [
         ...prev,
@@ -213,10 +228,16 @@ const Chat = () => {
     }
   };
 
+  const handleOptionSelect = (option: ResponseOption) => {
+    setPendingOptions(null);
+    setMessages((prev) => [...prev, { role: "assistant", content: option.message }]);
+  };
+
   const handleSend = async (text: string) => {
     const userMsg: Msg = { role: "user", content: text };
     const updatedMessages = [...messages, userMsg];
     setMessages(updatedMessages);
+    setPendingOptions(null);
 
     if (checkSafety(text)) {
       setIsTyping(true);
@@ -227,16 +248,28 @@ const Chat = () => {
       return;
     }
 
-    setIsTyping(true);
-    const systemPrompt = buildSystemPrompt(
-      category!.name,
-      category!.basePrompt,
-      activePersona,
-      activeScenario,
-      customScenario,
-      responseStyle,
-    );
+    // Fetch multiple response options
+    setIsLoadingOptions(true);
+    try {
+      const options = await fetchResponseOptions(updatedMessages, getSystemPrompt());
+      if (options.length > 0) {
+        setPendingOptions(options);
+      } else {
+        // Fallback to streaming single response
+        await fallbackStream(updatedMessages);
+      }
+    } catch (err: any) {
+      console.error("Options error:", err);
+      toast.error(err.message || "Failed to get responses");
+      // Fallback to streaming
+      await fallbackStream(updatedMessages);
+    } finally {
+      setIsLoadingOptions(false);
+    }
+  };
 
+  const fallbackStream = async (updatedMessages: Msg[]) => {
+    setIsTyping(true);
     let assistantSoFar = "";
     const upsert = (chunk: string) => {
       assistantSoFar += chunk;
@@ -248,16 +281,12 @@ const Chat = () => {
         return [...prev, { role: "assistant" as const, content: assistantSoFar }];
       });
     };
-
     await streamChat({
       messages: updatedMessages,
-      systemPrompt,
+      systemPrompt: getSystemPrompt(),
       onDelta: upsert,
       onDone: () => setIsTyping(false),
-      onError: (err) => {
-        toast.error(err);
-        setIsTyping(false);
-      },
+      onError: (err) => { toast.error(err); setIsTyping(false); },
     });
   };
 
@@ -325,18 +354,25 @@ const Chat = () => {
             className="mb-4 flex items-center justify-center"
           >
             <span className="rounded-full bg-secondary px-3 py-1 text-xs text-muted-foreground">
-              Practice conversation — switch personas anytime ↑
+              Practice conversation — pick the response that matches the real person
             </span>
           </motion.div>
           {messages.map((msg, i) => (
             <ChatMessage key={i} role={msg.role} content={msg.content} />
           ))}
           {isTyping && messages[messages.length - 1]?.role !== "assistant" && <TypingIndicator />}
+          {(isLoadingOptions || pendingOptions) && (
+            <ResponseOptions
+              options={pendingOptions || []}
+              onSelect={handleOptionSelect}
+              isLoading={isLoadingOptions}
+            />
+          )}
         </div>
       </div>
 
       <div className="mx-auto w-full max-w-2xl">
-        <ChatInput onSend={handleSend} disabled={isTyping} />
+        <ChatInput onSend={handleSend} disabled={isTyping || isLoadingOptions || !!pendingOptions} />
       </div>
     </div>
   );

@@ -20,7 +20,7 @@ const ResponseOptions = ({ options, onSelect, isLoading }: ResponseOptionsProps)
           <p className="text-xs font-medium text-muted-foreground px-1 mb-2">
             ✨ Generating possible responses…
           </p>
-          {[0, 1, 2].map((i) => (
+          {[0, 1, 2, 3, 4].map((i) => (
             <div
               key={i}
               className="animate-pulse rounded-xl border border-border bg-card/60 p-3"

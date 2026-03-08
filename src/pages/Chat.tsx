@@ -268,11 +268,8 @@ const Chat = () => {
     lastUserMessages.current = updatedMessages;
 
     if (checkSafety(text)) {
-      setIsTyping(true);
-      setTimeout(() => {
-        setMessages((prev) => [...prev, { role: "assistant", content: SAFETY_RESPONSE }]);
-        setIsTyping(false);
-      }, 400);
+      lastUserMessages.current = null;
+      setMessages((prev) => [...prev, { role: "assistant", content: SAFETY_RESPONSE }]);
       return;
     }
 

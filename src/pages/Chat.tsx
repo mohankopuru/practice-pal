@@ -80,11 +80,26 @@ const Chat = () => {
   const handlePersonaSwitch = (persona: Persona) => {
     if (persona.id === activePersona?.id) return;
     setActivePersona(persona);
-    // Add a system message to indicate the switch
     setMessages((prev) => [
       ...prev,
       { role: "assistant", content: `*switches to ${persona.emoji} ${persona.label} mode*\n\nAlright, let's continue. What were you saying?` },
     ]);
+  };
+
+  const handleScenarioSwitch = (scenario: Scenario | null) => {
+    if (scenario?.id === activeScenario?.id) return;
+    setActiveScenario(scenario);
+    if (scenario) {
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: `*Scene set: ${scenario.emoji} ${scenario.label}*\n\n${scenario.description}. Let's go — what would you like to say?` },
+      ]);
+    } else {
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: `*Scenario cleared* — we're back to a free conversation. What's on your mind?` },
+      ]);
+    }
   };
 
   const handleSend = (text: string) => {
